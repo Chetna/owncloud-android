@@ -17,21 +17,16 @@
  */
 package eu.alefzero.owncloud.ui.fragment;
 
-import java.util.List;
-
 import android.accounts.Account;
 import android.accounts.AccountManager;
-import android.app.ActionBar.LayoutParams;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapFactory.Options;
-import android.graphics.Path.FillType;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -51,6 +46,7 @@ import eu.alefzero.owncloud.DisplayUtils;
 import eu.alefzero.owncloud.R;
 import eu.alefzero.owncloud.authenticator.AccountAuthenticator;
 import eu.alefzero.owncloud.datamodel.OCFile;
+import eu.alefzero.owncloud.files.services.DataTransferService;
 import eu.alefzero.owncloud.files.services.FileDownloader;
 import eu.alefzero.owncloud.utils.OwnCloudVersion;
 
@@ -145,14 +141,26 @@ public class FileDetailFragment extends SherlockFragment implements
 
     @Override
     public void onClick(View v) {
-        Toast.makeText(getActivity(), "Downloading", Toast.LENGTH_LONG).show();
-        Intent i = new Intent(getActivity(), FileDownloader.class);
+        if (v.getId() == R.id.fdDownloadBtn) {
+            Toast.makeText(getActivity(), "Downloading", Toast.LENGTH_LONG).show();
+        /*Intent i = new Intent(getActivity(), FileDownloader.class);
         i.putExtra(FileDownloader.EXTRA_ACCOUNT,
                 mIntent.getParcelableExtra(FileDownloader.EXTRA_ACCOUNT));
         i.putExtra(FileDownloader.EXTRA_REMOTE_PATH, mFile.getRemotePath());
         i.putExtra(FileDownloader.EXTRA_FILE_PATH, mFile.getURLDecodedRemotePath());
-        i.putExtra(FileDownloader.EXTRA_FILE_SIZE, mFile.getFileLength());
-        getActivity().startService(i);
+        i.putExtra(FileDownloader.EXTRA_FILE_SIZE, mFile.getFileLength());*/
+            Intent i = new Intent(getActivity(), DataTransferService.class);
+            i.putExtra(DataTransferService.EXTRA_TRANSFER_TYPE, DataTransferService.TYPE_DOWNLOAD_FILE);
+            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA1, mIntent.getParcelableExtra(FileDownloader.EXTRA_ACCOUNT));
+            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA2, mFile.getURLDecodedRemotePath());
+            getActivity().startService(i);
+        } else if (v.getId() == R.id.fdRemoveBtn) {
+            Intent i = new Intent(getActivity(), DataTransferService.class);
+            i.putExtra(DataTransferService.EXTRA_TRANSFER_TYPE, DataTransferService.TYPE_REMOVE);
+            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA1, mIntent.getParcelableExtra(FileDownloader.EXTRA_ACCOUNT));
+            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA2, mFile.getURLDecodedRemotePath());
+            getActivity().startService(i);
+        }
     }
 
     /**
@@ -287,6 +295,7 @@ public class FileDetailFragment extends SherlockFragment implements
                 downloadButton.setOnClickListener(this);
             }
         }
+        ((Button)getView().findViewById(R.id.fdRemoveBtn)).setOnClickListener(this);
     }
     
     /**

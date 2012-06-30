@@ -173,6 +173,14 @@
                     android:layout_below="@+id/fdPreview"
                     android:layout_marginTop="12dp"
                     android:text="@string/filedetails_download" />
+                <Button
+                    android:id="@+id/fdRemoveBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
+                    android:layout_below="@+id/fdDownloadBtn"
+                    android:layout_marginTop="12dp"
+                    android:text="Remove" />
             </RelativeLayout>
         </RelativeLayout>
     </ScrollView>

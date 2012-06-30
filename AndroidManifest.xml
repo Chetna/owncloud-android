@@ -158,6 +158,7 @@
             </intent-filter>
         </receiver>
         <activity android:name="CrashlogSendActivity"></activity>
+        <service android:name=".files.services.DataTransferService"></service>
     </application>
 
 </manifest>

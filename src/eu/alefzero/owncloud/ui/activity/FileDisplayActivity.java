@@ -62,6 +62,7 @@ import eu.alefzero.owncloud.authenticator.AccountAuthenticator;
 import eu.alefzero.owncloud.datamodel.DataStorageManager;
 import eu.alefzero.owncloud.datamodel.FileDataStorageManager;
 import eu.alefzero.owncloud.datamodel.OCFile;
+import eu.alefzero.owncloud.files.services.DataTransferService;
 import eu.alefzero.owncloud.files.services.FileDownloader;
 import eu.alefzero.owncloud.files.services.FileUploader;
 import eu.alefzero.owncloud.syncadapter.FileSyncService;
@@ -456,8 +457,14 @@ public class FileDisplayActivity extends SherlockFragmentActivity implements
                             
                             // Create directory
                             path += Uri.encode(directoryName) + "/";
-                            Thread thread = new Thread(new DirectoryCreator(path, a));
-                            thread.start();
+                            Intent i = new Intent(getApplicationContext(), DataTransferService.class);
+                            i.putExtra(DataTransferService.EXTRA_TRANSFER_TYPE, DataTransferService.TYPE_MKDIR);
+                            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA1, a);
+                            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA2, path);
+                            startService(i);
+                            
+                           //Thread thread = new Thread(new DirectoryCreator(path, a));
+                            //thread.start();
     
                             // Save new directory in local database
                             OCFile newDir = new OCFile(path);
