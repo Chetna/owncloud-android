@@ -19,13 +19,19 @@ package eu.alefzero.owncloud.files.services.transer_handlers;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URLEncoder;
+
+import eu.alefzero.owncloud.datamodel.FileDataStorageManager;
+import eu.alefzero.owncloud.datamodel.OCFile;
+import eu.alefzero.owncloud.files.services.DataTransferService;
 
 import android.accounts.Account;
+import android.content.ContentValues;
 import android.content.Context;
 import android.os.Environment;
 import android.util.Log;
 
-public class DownloadTransfer extends TransferHandler implements Runnable {
+public class DownloadTransfer extends TransferHandler {
 
     public DownloadTransfer(Context context, Account account, String path) {
         super(context, account, path);
@@ -42,6 +48,23 @@ public class DownloadTransfer extends TransferHandler implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        getClient().downloadFile(getPath(), file);
+        String[] splitted_filepath = getPath().split("/");
+        String path = "";
+        for (String s : splitted_filepath) {
+            if (s.equals("")) continue;
+            path += "/" + URLEncoder.encode(s).replace("+", "%20");
+        }
+        Log.e("ASD", path);
+        boolean result = getClient().downloadFile(path, file);
+        Log.e("SAD", "downloadin done " +result);
+        if (getListener() != null) {
+            ContentValues cv = new ContentValues();
+            cv.put("TYPE", DataTransferService.TYPE_DOWNLOAD_FILE);
+            cv.put("RESULT", result);
+            cv.put("ACCOUNT", getAccount().name);
+            if (result)
+                cv.put("PATH", file.getAbsolutePath());
+            getListener().TransferCompleted(cv);
+        }
     }
 }

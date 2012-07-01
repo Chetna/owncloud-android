@@ -26,7 +26,7 @@ import eu.alefzero.owncloud.authenticator.AccountAuthenticator;
 import eu.alefzero.owncloud.utils.OwnCloudVersion;
 import eu.alefzero.webdav.WebdavClient;
 
-public class TransferHandler {
+public class TransferHandler implements Runnable {
 
     private Account mAccount;
     private String mPath;
@@ -34,12 +34,14 @@ public class TransferHandler {
     private AccountManager mAccountMngr;
     private String mOcURL;
     private WebdavClient mWebdavClient;
+    private OnTransferCompletedListener mListener;
     
     public TransferHandler(Context context, Account account, String path) {
         mContext = context;
         mAccount = account;
         mPath = path;
         mAccountMngr = AccountManager.get(mContext);
+        mListener = null;
     }
     
     protected Account getAccount() { return mAccount; }
@@ -63,5 +65,16 @@ public class TransferHandler {
         mWebdavClient.setCredentials(username, mAccountMngr.getPassword(mAccount));
         mWebdavClient.allowSelfsignedCertificates();
     }
+
+    public void setOnTransferCompletedListener(OnTransferCompletedListener listener) {
+        mListener = listener;
+    }
+    
+    public OnTransferCompletedListener getListener() {
+        return mListener;
+    }
+    
+    @Override
+    public void run() {}
 
 }

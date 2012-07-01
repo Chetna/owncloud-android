@@ -68,6 +68,22 @@ public class AccountUtils {
         return defaultAccount;
     }
 
+    public static Account getAccountByName(String accountName, Context context) {
+        Account[] ocAccounts = AccountManager.get(context).getAccountsByType(
+                AccountAuthenticator.ACCOUNT_TYPE);
+        Account defaultAccount = null;
+
+        if (accountName != null) {
+            for (Account account : ocAccounts) {
+                if (account.name.equals(accountName)) {
+                    defaultAccount = account;
+                    break;
+                }
+            }
+        }
+
+        return defaultAccount;
+    }
     
 
     /**

@@ -459,8 +459,8 @@ public class FileDisplayActivity extends SherlockFragmentActivity implements
                             path += Uri.encode(directoryName) + "/";
                             Intent i = new Intent(getApplicationContext(), DataTransferService.class);
                             i.putExtra(DataTransferService.EXTRA_TRANSFER_TYPE, DataTransferService.TYPE_MKDIR);
-                            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA1, a);
-                            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA2, path);
+                            i.putExtra(DataTransferService.EXTRA_TRANSFER_ACCOUNT, a);
+                            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA1, path);
                             startService(i);
                             
                            //Thread thread = new Thread(new DirectoryCreator(path, a));

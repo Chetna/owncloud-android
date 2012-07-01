@@ -61,7 +61,7 @@ public class FileDetailFragment extends SherlockFragment implements
 
     public static final String EXTRA_FILE = "FILE";
 
-    private DownloadFinishReceiver mDownloadFinishReceiver;
+    private TransferFinishReceiver mDownloadFinishReceiver;
     private Intent mIntent;
     private int mLayout;
     private View mView;
@@ -103,15 +103,16 @@ public class FileDetailFragment extends SherlockFragment implements
 
     @Override
     public void onResume() {
+        Log.e("ASD", "FDF on Resume");
         super.onResume();
-        mDownloadFinishReceiver = new DownloadFinishReceiver();
-        IntentFilter filter = new IntentFilter(
-                FileDownloader.DOWNLOAD_FINISH_MESSAGE);
+        mDownloadFinishReceiver = new TransferFinishReceiver();
+        IntentFilter filter = new IntentFilter(DataTransferService.TRANSFER_COMPLETED);
         getActivity().registerReceiver(mDownloadFinishReceiver, filter);
     }
 
     @Override
     public void onPause() {
+        Log.e("ASD", "FDF on Pause");
         super.onPause();
         getActivity().unregisterReceiver(mDownloadFinishReceiver);
         mDownloadFinishReceiver = null;
@@ -151,14 +152,14 @@ public class FileDetailFragment extends SherlockFragment implements
         i.putExtra(FileDownloader.EXTRA_FILE_SIZE, mFile.getFileLength());*/
             Intent i = new Intent(getActivity(), DataTransferService.class);
             i.putExtra(DataTransferService.EXTRA_TRANSFER_TYPE, DataTransferService.TYPE_DOWNLOAD_FILE);
-            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA1, mIntent.getParcelableExtra(FileDownloader.EXTRA_ACCOUNT));
-            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA2, mFile.getURLDecodedRemotePath());
+            i.putExtra(DataTransferService.EXTRA_TRANSFER_ACCOUNT, mIntent.getParcelableExtra(FileDownloader.EXTRA_ACCOUNT));
+            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA1, mFile.getURLDecodedRemotePath());
             getActivity().startService(i);
         } else if (v.getId() == R.id.fdRemoveBtn) {
             Intent i = new Intent(getActivity(), DataTransferService.class);
             i.putExtra(DataTransferService.EXTRA_TRANSFER_TYPE, DataTransferService.TYPE_REMOVE);
-            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA1, mIntent.getParcelableExtra(FileDownloader.EXTRA_ACCOUNT));
-            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA2, mFile.getURLDecodedRemotePath());
+            i.putExtra(DataTransferService.EXTRA_TRANSFER_ACCOUNT, mIntent.getParcelableExtra(FileDownloader.EXTRA_ACCOUNT));
+            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA1, mFile.getURLDecodedRemotePath());
             getActivity().startService(i);
         }
     }
@@ -379,13 +380,29 @@ public class FileDetailFragment extends SherlockFragment implements
      * Once the file download has finished -> update view
      * @author Bartek Przybylski
      */
-    private class DownloadFinishReceiver extends BroadcastReceiver {
+    private class TransferFinishReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            ((OCFile)mIntent.getParcelableExtra(EXTRA_FILE)).setStoragePath(intent.getStringExtra(FileDownloader.EXTRA_FILE_PATH));
-            updateFileDetails(mIntent);
+            Log.e("ASD", "onReceive");
+            switch (intent.getIntExtra("TYPE", DataTransferService.TYPE_UNKNOWN)) {
+                case DataTransferService.TYPE_REMOVE:
+                {
+                    if (getFragmentManager().findFragmentById(R.id.fileList) == null)
+                        getActivity().onBackPressed();
+                        
+                    break;
+                }
+                case DataTransferService.TYPE_DOWNLOAD_FILE:
+                {
+                    Log.e("ASD", " " + intent.getBooleanExtra("RESULT", false));
+                    Log.e("ASD", " " + intent.hasExtra(FileDownloader.EXTRA_FILE_PATH));
+                    if (intent.getBooleanExtra("RESULT", false)) {
+                        ((OCFile)mIntent.getParcelableExtra(EXTRA_FILE)).setStoragePath(intent.getStringExtra("PATH"));
+                        updateFileDetails(mIntent);
+                    }
+                }
+            }
         }
-        
     }
 
 }

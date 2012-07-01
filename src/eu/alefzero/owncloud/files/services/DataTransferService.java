@@ -19,30 +19,46 @@ package eu.alefzero.owncloud.files.services;
 
 import java.util.LinkedList;
 
+import eu.alefzero.owncloud.AccountUtils;
+import eu.alefzero.owncloud.datamodel.FileDataStorageManager;
+import eu.alefzero.owncloud.datamodel.OCFile;
+import eu.alefzero.owncloud.db.DbHandler;
 import eu.alefzero.owncloud.files.services.transer_handlers.DownloadTransfer;
 import eu.alefzero.owncloud.files.services.transer_handlers.MkDirTransfer;
 import eu.alefzero.owncloud.files.services.transer_handlers.RemoveTransfer;
+import eu.alefzero.owncloud.files.services.transer_handlers.OnTransferCompletedListener;
+import eu.alefzero.owncloud.files.services.transer_handlers.TransferHandler;
+import eu.alefzero.owncloud.ui.fragment.FileDetailFragment;
 
 import android.accounts.Account;
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.Toast;
 
 /*
  * DataTransferService is made to unify transfer between user equipment
  * and ownCloud instance. Its duty is to handle all network traffic, failures
  * and postpone network actions when connection is unavailable.
  */
-public class DataTransferService extends Service {
+public class DataTransferService extends Service implements OnTransferCompletedListener {
 
     public final static String EXTRA_TRANSFER_TYPE = "EXTRA_TRANSFER_TYPE";
+    public final static String EXTRA_TRANSFER_ACCOUNT = "EXTRA_TRANSFER_ACCOUNT";
     public final static String EXTRA_TRANSFER_DATA1 = "EXTRA_TRANSFER_DATA1";
     public final static String EXTRA_TRANSFER_DATA2 = "EXTRA_TRANSFER_DATA2";
     public final static String EXTRA_TRANSFER_DATA3 = "EXTRA_TRANSFER_DATA3";
+    public final static String EXTRA_PENDING_TRANSFER_ID = "EXTRA_PENDING_TRANSFER_ID";
 
+    public final static String TRANSFER_COMPLETED = "eu.alefzero.owncloud.files.services.DataTransferService.TRANSFER_COMPLETED";
+    
     /*
      * Dummy action for handle when no transfer type is unavailable
      */
@@ -60,6 +76,7 @@ public class DataTransferService extends Service {
 
     private WorkQueue mWorkQueue;
     private ConnectivityManager mConnMngr;
+    private EquipmentConnectedReceiver mEqConnRec;
     
     @Override
     public IBinder onBind(Intent arg0) {
@@ -71,13 +88,29 @@ public class DataTransferService extends Service {
         super.onCreate();
         mWorkQueue = new WorkQueue(5);
         mConnMngr = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+        mEqConnRec = new EquipmentConnectedReceiver();
+        registerReceiver(mEqConnRec, new IntentFilter("android.net.conn.CONNECTIVITY_CHANGE"));
+    }
+    
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.e("ASD", "destroy");
+        unregisterReceiver(mEqConnRec);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) return Service.START_STICKY;
-
-        Runnable r;
+        if (!isOnline()) {
+            storeDataInDB(intent);
+            return Service.START_STICKY;
+        }
+        
+        Log.e("ASD", "doing start command");
+        
+        TransferHandler r;
+        Account account = intent.getParcelableExtra(EXTRA_TRANSFER_ACCOUNT);
 
         switch (intent.getIntExtra(EXTRA_TRANSFER_TYPE, TYPE_UNKNOWN)) {
             case TYPE_SYNCDIR:
@@ -85,25 +118,24 @@ public class DataTransferService extends Service {
             }
             case TYPE_MKDIR:
             {
-                Account account = intent.getParcelableExtra(EXTRA_TRANSFER_DATA1);
-                String path = intent.getStringExtra(EXTRA_TRANSFER_DATA2);
+                String path = intent.getStringExtra(EXTRA_TRANSFER_DATA1);
                 r = new MkDirTransfer(this, account, path);
                 break;
             }
             case TYPE_UPLOAD_FILE:
             {
+                String localPath = intent.getStringExtra(EXTRA_TRANSFER_DATA1);
+                String remotePath = intent.getStringExtra(EXTRA_TRANSFER_DATA2);
             }
             case TYPE_DOWNLOAD_FILE:
             {
-                Account account = intent.getParcelableExtra(EXTRA_TRANSFER_DATA1);
-                String path = intent.getStringExtra(EXTRA_TRANSFER_DATA2);
+                String path = intent.getStringExtra(EXTRA_TRANSFER_DATA1);
                 r = new DownloadTransfer(this, account, path);
                 break;
             }
             case TYPE_REMOVE:
             {
-                Account account = intent.getParcelableExtra(EXTRA_TRANSFER_DATA1);
-                String path = intent.getStringExtra(EXTRA_TRANSFER_DATA2);
+                String path = intent.getStringExtra(EXTRA_TRANSFER_DATA1);
                 r = new RemoveTransfer(this, account, path);
                 break;
             }
@@ -113,9 +145,90 @@ public class DataTransferService extends Service {
                 return Service.START_STICKY;
         }
         
+        r.setOnTransferCompletedListener(this);
+        
         mWorkQueue.execute(r);
         
         return Service.START_STICKY;
+    }
+    
+    private void storeDataInDB(Intent intent) {
+        DbHandler db = new DbHandler(this);
+        db.putPendingTransfer(intent);
+        db.close();
+    }
+
+    private boolean isOnline() {
+        return mConnMngr.getActiveNetworkInfo() != null && mConnMngr.getActiveNetworkInfo().isConnected();
+    }
+    
+    @Override
+    public void TransferCompleted(ContentValues values) {
+        int type = values.getAsInteger("TYPE");
+        Account account = AccountUtils.getAccountByName(values.getAsString("ACCOUNT"), this);
+        Intent intent = new Intent(TRANSFER_COMPLETED);
+        switch (type) {
+            case TYPE_MKDIR:
+            case TYPE_UPLOAD_FILE:
+            case TYPE_DOWNLOAD_FILE:
+            {
+                boolean result = values.getAsBoolean("RESULT");
+                intent.putExtra("TYPE", TYPE_DOWNLOAD_FILE);
+                intent.putExtra("RESULT", result);
+                if (result)
+                    intent.putExtra("PATH", values.getAsString("PATH"));
+                break;
+            }
+            case TYPE_REMOVE:
+            {
+                boolean result = values.getAsBoolean("RESULT");
+                String path = values.getAsString("PATH");
+                intent.putExtra("TYPE", TYPE_REMOVE);
+                if (result) {
+                    FileDataStorageManager dataMngr = new FileDataStorageManager(account, getContentResolver());
+                    OCFile file = dataMngr.getFileByPath(path);
+                    dataMngr.removeFile(file);
+                    intent.putExtra("RESULT", true);
+                } else {
+                    intent.putExtra("RESULT", false);
+                }
+                break;
+            }
+            default:
+                intent = null;
+        }
+        if (intent != null)
+            sendBroadcast(intent);
+        
+    }
+    
+    private class EquipmentConnectedReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final NetworkInfo netInfo = mConnMngr.getActiveNetworkInfo();
+            if (netInfo == null) {
+                Log.e("DataTransferService", "Connection lost");
+                return;
+            }
+            if (netInfo.isConnected()) {
+                DbHandler db = new DbHandler(context);
+                Intent i;
+                while ((i = db.getNextAvaitingTransfer()) != null) {
+                    
+                    Account account = AccountUtils.getAccountByName(i.getStringExtra(EXTRA_TRANSFER_ACCOUNT), DataTransferService.this);
+                    if (account != null) {
+                        i.putExtra(EXTRA_TRANSFER_ACCOUNT, account);
+                        onStartCommand(i, 0, 0);
+                    } else {
+                        Log.e("ASD", "Account " + i.getStringExtra(EXTRA_TRANSFER_ACCOUNT) + " doesnt exists anymore");
+                    }
+                    db.removePendingTransfer(i.getIntExtra(EXTRA_PENDING_TRANSFER_ID, 0));
+                }
+                db.close();
+            }
+        }
+        
     }
     
     private class WorkQueue {

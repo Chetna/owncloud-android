@@ -17,7 +17,10 @@
  */
 package eu.alefzero.owncloud.ui.activity;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.v4.app.FragmentTransaction;
 
@@ -26,6 +29,7 @@ import com.actionbarsherlock.app.SherlockFragmentActivity;
 import com.actionbarsherlock.view.MenuItem;
 
 import eu.alefzero.owncloud.R;
+import eu.alefzero.owncloud.files.services.DataTransferService;
 import eu.alefzero.owncloud.ui.fragment.FileDetailFragment;
 
 /**
@@ -70,14 +74,12 @@ public class FileDetailActivity extends SherlockFragmentActivity {
         return returnValue;
     }
 
-
-
     @Override
     protected void onResume() {
         super.onResume();
         mFileDetail.updateFileDetails(getIntent());
     }
-    
+
     
 
 }

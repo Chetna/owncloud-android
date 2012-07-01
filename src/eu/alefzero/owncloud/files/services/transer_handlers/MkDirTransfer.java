@@ -26,7 +26,7 @@ import android.accounts.Account;
 import android.content.Context;
 import android.util.Log;
 
-public class MkDirTransfer extends TransferHandler implements Runnable {
+public class MkDirTransfer extends TransferHandler {
     
     public MkDirTransfer(Context context, Account account, String path) {
         super(context, account, path);
