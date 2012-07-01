@@ -144,7 +144,8 @@ public class FileDownloader extends Service implements OnDatatransferProgressLis
 
         Log.e(TAG, file.getAbsolutePath() + " " + oc_url.toString());
         Log.e(TAG, mFilePath+"");
-        if (wdc.downloadFile(mRemotePath, file)) {
+        boolean result;
+        if ((result = wdc.downloadFile(mRemotePath, file))) {
             ContentValues cv = new ContentValues();
             cv.put(ProviderTableMeta.FILE_STORAGE_PATH, file.getAbsolutePath());
             getContentResolver().update(
@@ -157,8 +158,11 @@ public class FileDownloader extends Service implements OnDatatransferProgressLis
                             mAccount.name });            
         }
         mNotificationMngr.cancel(1);
-        Intent end = new Intent(DOWNLOAD_FINISH_MESSAGE);
-        end.putExtra(EXTRA_FILE_PATH, file.getAbsolutePath());
+        Intent end = new Intent(DataTransferService.TRANSFER_COMPLETED);
+        end.putExtra("TYPE", DataTransferService.TYPE_DOWNLOAD_FILE);
+        end.putExtra("PATH", file.getAbsolutePath());
+        end.putExtra("RESULT", result);
+        
         sendBroadcast(end);
     }
 

@@ -144,16 +144,16 @@ public class FileDetailFragment extends SherlockFragment implements
     public void onClick(View v) {
         if (v.getId() == R.id.fdDownloadBtn) {
             Toast.makeText(getActivity(), "Downloading", Toast.LENGTH_LONG).show();
-        /*Intent i = new Intent(getActivity(), FileDownloader.class);
+        Intent i = new Intent(getActivity(), FileDownloader.class);
         i.putExtra(FileDownloader.EXTRA_ACCOUNT,
                 mIntent.getParcelableExtra(FileDownloader.EXTRA_ACCOUNT));
         i.putExtra(FileDownloader.EXTRA_REMOTE_PATH, mFile.getRemotePath());
         i.putExtra(FileDownloader.EXTRA_FILE_PATH, mFile.getURLDecodedRemotePath());
-        i.putExtra(FileDownloader.EXTRA_FILE_SIZE, mFile.getFileLength());*/
-            Intent i = new Intent(getActivity(), DataTransferService.class);
+        i.putExtra(FileDownloader.EXTRA_FILE_SIZE, mFile.getFileLength());
+            /*Intent i = new Intent(getActivity(), DataTransferService.class);
             i.putExtra(DataTransferService.EXTRA_TRANSFER_TYPE, DataTransferService.TYPE_DOWNLOAD_FILE);
             i.putExtra(DataTransferService.EXTRA_TRANSFER_ACCOUNT, mIntent.getParcelableExtra(FileDownloader.EXTRA_ACCOUNT));
-            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA1, mFile.getURLDecodedRemotePath());
+            i.putExtra(DataTransferService.EXTRA_TRANSFER_DATA1, mFile.getURLDecodedRemotePath());*/
             getActivity().startService(i);
         } else if (v.getId() == R.id.fdRemoveBtn) {
             Intent i = new Intent(getActivity(), DataTransferService.class);
@@ -394,8 +394,6 @@ public class FileDetailFragment extends SherlockFragment implements
                 }
                 case DataTransferService.TYPE_DOWNLOAD_FILE:
                 {
-                    Log.e("ASD", " " + intent.getBooleanExtra("RESULT", false));
-                    Log.e("ASD", " " + intent.hasExtra(FileDownloader.EXTRA_FILE_PATH));
                     if (intent.getBooleanExtra("RESULT", false)) {
                         ((OCFile)mIntent.getParcelableExtra(EXTRA_FILE)).setStoragePath(intent.getStringExtra("PATH"));
                         updateFileDetails(mIntent);
